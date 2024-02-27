@@ -15,16 +15,8 @@ model_t *model_new(size_t verticies_count, size_t edges_count) {
     model->edges = ((void*)model->verticies) + sizeof(vec3_t) * verticies_count;
     model->pos = vec3_zero();
     model->rot = vec3_zero();
+    model->scale = vec3_zero();
     
-    printf("Allocated model with size = %zu\n", sizeof(model_t) + sizeof(vec3_t) * verticies_count + sizeof(size_t) * edges_count);
-    printf("where:\n\tsizeof(model_t)=%zu\n\tsizeof(vec3_t)=%zu\n\tverticies_count=%zu\n\tedges_count=%zu\n\tverticies_memsize=%zu\n\tedges_memsize=%zu\n",
-           sizeof(model_t),
-           sizeof(vec3_t),
-           verticies_count,
-           edges_count,
-           sizeof(vec3_t) * verticies_count,
-           sizeof(size_t) * edges_count
-    );
     return model;
 }
 

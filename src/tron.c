@@ -19,18 +19,9 @@ void tron_draw_model(SDL_Renderer *ren, const camera_t *camera, const model_t *m
         vec3_t p1 = model->verticies[model->edges[i * 2]];
         vec3_t p2 = model->verticies[model->edges[i * 2 + 1]];
 
-        //double k1 = 10.f / p1.z;
-        //double k2 = 10.f / p2.z;
-
-        //p1.x *= k1;
-        //p1.y *= k1;
-        //p2.x *= k2;
-        //p2.y *= k2;
-        
         p1 = camera_get_project_point(camera, &p1);
         p2 = camera_get_project_point(camera, &p2);
 
-        printf("(%f, %f, %f) -> (%f, %f, %f)\r", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
         SDL_RenderDrawLineF(ren, p1.x, p1.y, p2.x, p2.y);
     }
 }
@@ -49,34 +40,26 @@ void transform_model_mat(model_t *dst_model, model_t *src_model, const matrix_t 
         vec4_t point = vec4_from_vec3(&src_model->verticies[i]);
         point.w = 1;
         
-        //matrix_t *point_mat = matrix_from_column_vec4(&point4);
         matrix_set_column_vec4(tmp_point_mat, &point);
-        //str_t ps = vec4_str(&point);
-        //printf("Vector: %s\n", ps.str);
-        //str_free(&ps);
-        //ps = matrix_str(tmp_point_mat);
-        //printf("Vector mat:\n%s\n", ps.str);
-        //str_free(&ps);
-        
         matrix_mul(tmp_new_point_mat, mat, tmp_point_mat);
         
-        //str_t s = matrix_str(tmp_new_point_mat);
-        //printf("%s\n", s.str);
-        //str_free(&s);
-        
         vec3_t *draw_point = &dst_model->verticies[i];
-        printf("%s\n", matrix_str(tmp_new_point_mat).str);
         draw_point->x = matrix_get(tmp_new_point_mat, 0, 0);
         draw_point->y = matrix_get(tmp_new_point_mat, 1, 0);
         draw_point->z = matrix_get(tmp_new_point_mat, 2, 0);
-        
-        //printf("%s\n", vec3_str(&src_model->verticies[0]).str);
     }
 }
 
-void transform_model(model_t *dst_model, model_t *src_model, const camera_t* camera, ) {
+void transform_model(model_t *dst_model, model_t *src_model) {
     for (size_t i = 0; i < src_model->verticies_count; ++i) {
+        vec3_t *vec = &dst_model->verticies[i];
+        *vec = src_model->verticies[i];
         
+        vec3_rotx(vec, src_model->rot.x);
+        vec3_roty(vec, src_model->rot.y);
+        vec3_rotz(vec, src_model->rot.z);
+        vec3_scale(vec, &src_model->scale);
+        vec3_add(vec, &src_model->pos);
     }
 }
 
@@ -86,8 +69,7 @@ int main() {
 		return EXIT_FAILURE;
 	}
 
-	SDL_Window* win = SDL_CreateWindow("Hello World!", 100, 100, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
-	if (win == NULL) {
+	SDL_Window* win = SDL_CreateWindow("Hello World!", 100, 100, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI); if (win == NULL) {
 		fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
 		return EXIT_FAILURE;
 	}
@@ -99,12 +81,11 @@ int main() {
 		SDL_Quit();
 		return EXIT_FAILURE;
 	}
-    //matrix_init();
 
     camera_t camera = {
-        .pos = {0, 0, -3},
+        .pos = {400, 290, -1000},
         .rot = {0, 0, 0},
-        .display_pos = {0, 0, -2}
+        .display_pos = {400, 290, -1100}
     };
 
     vec3_t cube_verticies[] = {
@@ -146,19 +127,11 @@ int main() {
     };
     
     model_t *cube = model_from_raw(verticies, sizeof(verticies) / sizeof(vec3_t), edges, sizeof(edges) / sizeof(size_t) / 2);
-    //model_t *draw_cube = model_from(cube);
     model_t *draw_cube = model_from_raw(verticies, sizeof(verticies) / sizeof(vec3_t), edges, sizeof(edges) / sizeof(size_t) / 2);
 
-    matrix_t *transform_mat = matrix_new(4, 4);
-
-    double fov = 1.f / tan(70 / 2.f);
-    double aspect_ratio = 800.f / 600.f;
-    double near = 10.f;
-    double far = 100.f;
-
-    double near_speed = 10;
-    double far_speed = 10;
-    
+    cube->scale = (vec3_t){100, 100, 100};
+    cube->pos = (vec3_t){300, 300, 2020};
+    cube->scale = (vec3_t){300, 300, 300};
     printf("%s\n", vec3_str(&cube->verticies[0]).str);
     printf("%s\n", vec3_str(&draw_cube->verticies[0]).str);
     printf("%p and %p\n", cube, draw_cube);    
@@ -166,12 +139,7 @@ int main() {
     Uint64 dt_now = SDL_GetPerformanceCounter();
     double dt;
     vec3_t angle_speed = {500, 500, 500};
-    vec3_t angle = {0, 10, 0};
-    vec3_t move_vec = {300, 200, 10};
     double move_speed = 10001;
-    vec3_t scale_vec = {100, 100, 100};
-
-    printf("dist = %f\n", vec3_dist(&angle_speed, &angle));
     
     bool run = true;
     while (run) {
@@ -184,16 +152,16 @@ int main() {
                 case SDL_KEYDOWN: {
                     switch (e.key.keysym.sym) {
                         case SDLK_UP: {
-                            angle.z += angle_speed.y * dt;
+                            cube->rot.z += angle_speed.y * dt;
                         } break;
                         case SDLK_DOWN: {
-                            angle.z -= angle_speed.y * dt;
+                            cube->rot.z -= angle_speed.y * dt;
                         } break;
                         case SDLK_RIGHT: {
-                            angle.y += angle_speed.x * dt;
+                            cube->rot.y += angle_speed.x * dt;
                         } break;
                         case SDLK_LEFT: {
-                            angle.y -= angle_speed.x * dt;
+                            cube->rot.y -= angle_speed.x * dt;
                         } break;
 
                         case SDLK_d: {
@@ -235,16 +203,22 @@ int main() {
                         } break;
 
                         case SDLK_1: {
-                            move_vec.x -= move_speed * dt;
+                            cube->pos.x -= move_speed * dt;
                         } break;
                         case SDLK_2: {
-                            move_vec.x += move_speed * dt;
+                            cube->pos.x += move_speed * dt;
                         } break;
                         case SDLK_3: {
-                            move_vec.y += move_speed * dt;
+                            cube->pos.y += move_speed * dt;
                         } break;
                         case SDLK_4: {
-                            move_vec.y -= move_speed * dt;
+                            cube->pos.y -= move_speed * dt;
+                        } break;
+                        case SDLK_5: {
+                            cube->pos.z += move_speed * dt;
+                        } break;
+                        case SDLK_6: {
+                            cube->pos.z -= move_speed * dt;
                         } break;
                     }
                 } break;
@@ -252,31 +226,9 @@ int main() {
         }
 
         dt = (SDL_GetPerformanceCounter() - dt_now) / (double)SDL_GetPerformanceFrequency();
-        //printf("dt = %f\n", dt);
         dt_now = SDL_GetPerformanceCounter();
-    
-        //matrix_mul(transform_mat, get_move_matrix(&move_vec), get_scale_matrix(&scale_vec));
-        //matrix_mul(transform_mat, transform_mat, get_xrotate_matrix(angle.x));
-        //matrix_mul(transform_mat, transform_mat, get_yrotate_matrix(angle.y));
-        //matrix_mul(transform_mat, transform_mat, get_zrotate_matrix(angle.z));
-        ////matrix_mul(transform_mat, transform_mat, get_clip_matrix(fov, aspect_ratio, far, near));
 
-        //angle.x += speed.x * dt;
-        //angle.y += speed.y * dt;
-        //angle.z += speed.z * dt;
-       
-        //transform_model_mat(draw_cube, cube, transform_mat);
-
-        for (size_t i = 0; i < cube->verticies_count; ++i) {
-            draw_cube->verticies[i] = cube->verticies[i];
-            vec3_t *vec = &draw_cube->verticies[i];
-            
-            vec3_rotx(vec, angle.x);
-            vec3_roty(vec, angle.y);
-            vec3_rotz(vec, angle.z);
-            vec3_scale(vec, &scale_vec);
-            vec3_add(vec, &move_vec);
-        }
+        transform_model(draw_cube, cube);
         
         SDL_SetRenderDrawColor(ren, 0, 0, 0, 0);
         SDL_RenderClear(ren);
@@ -294,7 +246,4 @@ int main() {
 
     model_free(cube);
     model_free(draw_cube);
-    ////matrix_free(tmp_point_mat);
-    ////matrix_free(tmp_new_point_mat);
-    //matrix_free(transform_mat);
 }

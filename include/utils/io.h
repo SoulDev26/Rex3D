@@ -2,7 +2,7 @@
 #define TRON_IO_H
 
 
-void tron_printf(const char* fmt, ...);
+void rex_printf(const char* fmt, ...);
 
 
 #endif //TRON_IO_H

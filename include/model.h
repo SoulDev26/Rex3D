@@ -12,6 +12,7 @@ typedef struct {
 
     vec3_t rot;
     vec3_t pos;
+    vec3_t scale;
 } model_t;
 
 model_t *model_new(size_t verticies_count, size_t edges_count);
